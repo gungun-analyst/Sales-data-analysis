@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HealthAI</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; display: flex; height: 100vh; overflow: hidden; }
+
+    /* Sidebar */
+    .sidebar {
+      width: 220px; min-width: 220px; background: #161b22; display: flex; flex-direction: column;
+      padding: 24px 0; border-right: 1px solid #21262d;
+    }
+    .logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 32px; color: #58a6ff; font-size: 1.2rem; font-weight: 700; }
+    .logo svg { width: 22px; height: 22px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+      cursor: pointer; color: #8b949e; font-size: 0.9rem; border-left: 3px solid transparent;
+      transition: all 0.2s;
+    }
+    .nav-item:hover { color: #e6edf3; background: #1c2128; }
+    .nav-item.active { color: #e6edf3; background: #1c2128; border-left-color: #58a6ff; }
+    .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* Topbar */
+    .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px; border-bottom: 1px solid #21262d; background: #161b22;
+    }
+    .topbar-title { font-size: 1rem; font-weight: 600; color: #8b949e; }
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+    .icon-btn {
+      width: 36px; height: 36px; border-radius: 8px; background: #21262d;
+      border: none; cursor: pointer; color: #8b949e; display: flex; align-items: center; justify-content: center;
+    }
+    .avatar { width: 36px; height: 36px; border-radius: 8px; background: #58a6ff; color: #0d1117; font-weight: 700; font-size: 0.85rem; display: flex; align-items: center; justify-content: center; }
+
+    /* Content */
+    .content { flex: 1; overflow-y: auto; padding: 32px; }
+
+    /* Pages */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* Dashboard */
+    .page-title { font-size: 2rem; font-weight: 700; margin-bottom: 6px; }
+    .page-sub { color: #8b949e; margin-bottom: 28px; }
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .card { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 24px; }
+    .card-title { font-size: 0.85rem; color: #8b949e; margin-bottom: 20px; display: flex; align-items: center; gap-8px; }
+    .score-ring { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 16px 0; }
+    .ring-wrap { position: relative; width: 120px; height: 120px; }
+    .ring-wrap svg { transform: rotate(-90deg); }
+    .ring-num { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: 700; }
+    .score-change { color: #3fb950; font-size: 0.8rem; margin-top: 10px; }
+    .analysis-item { margin-bottom: 18px; }
+    .analysis-item h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+    .analysis-item h4::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #58a6ff; flex-shrink: 0; }
+    .analysis-item p { font-size: 0.8rem; color: #8b949e; line-height: 1.5; }
+    .card-label { font-size: 0.85rem; color: #8b949e; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+    /* Symptom Analyzer */
+    .symptom-card { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 24px; max-width: 800px; }
+    .symptom-card label { font-size: 0.9rem; color: #c9d1d9; display: block; margin-bottom: 12px; }
+    textarea {
+      width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 8px;
+      color: #e6edf3; padding: 14px; font-size: 0.9rem; resize: vertical; min-height: 140px;
+      font-family: inherit; outline: none;
+    }
+    textarea:focus { border-color: #58a6ff; }
+    .btn-primary {
+      margin-top: 16px; width: 100%; padding: 14px; border: none; border-radius: 8px;
+      background: linear-gradient(135deg, #58a6ff, #a371f7); color: #fff;
+      font-size: 1rem; font-weight: 600; cursor: pointer; transition: opacity 0.2s;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .result-box { margin-top: 20px; background: #0d1117; border: 1px solid #21262d; border-radius: 8px; padding: 16px; display: none; }
+    .result-box.show { display: block; }
+    .result-box h4 { color: #58a6ff; margin-bottom: 8px; font-size: 0.95rem; }
+    .result-box p { color: #c9d1d9; font-size: 0.88rem; line-height: 1.6; }
+
+    /* Vitals */
+    .vitals-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; }
+    .btn-add {
+      padding: 10px 18px; background: linear-gradient(135deg, #58a6ff, #a371f7);
+      border: none; border-radius: 8px; color: #fff; font-size: 0.85rem; font-weight: 600; cursor: pointer;
+    }
+    .vitals-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .vital-card { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 20px; border-top: 3px solid; }
+    .vital-card.green { border-top-color: #3fb950; }
+    .vital-card.blue { border-top-color: #58a6ff; }
+    .vital-card.yellow { border-top-color: #d29922; }
+    .vital-card.purple { border-top-color: #a371f7; }
+    .vital-card.teal { border-top-color: #39d353; }
+    .vital-label { font-size: 0.8rem; color: #8b949e; margin-bottom: 10px; }
+    .vital-value { font-size: 2rem; font-weight: 700; }
+    .vital-unit { font-size: 0.85rem; color: #8b949e; margin-left: 4px; }
+    .vital-status { font-size: 0.8rem; margin-top: 8px; }
+    .vital-status.normal { color: #3fb950; }
+    .vital-status.optimal { color: #58a6ff; }
+    .vital-status.warning { color: #d29922; }
+
+    /* Modal for Add Reading */
+    .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 100; align-items: center; justify-content: center; }
+    .modal-overlay.show { display: flex; }
+    .modal { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 28px; width: 380px; }
+    .modal h3 { margin-bottom: 20px; }
+    .form-group { margin-bottom: 14px; }
+    .form-group label { font-size: 0.85rem; color: #8b949e; display: block; margin-bottom: 6px; }
+    .form-group input, .form-group select {
+      width: 100%; background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+      color: #e6edf3; padding: 10px 12px; font-size: 0.9rem; outline: none; font-family: inherit;
+    }
+    .form-group input:focus, .form-group select:focus { border-color: #58a6ff; }
+    .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+    .btn-cancel { flex: 1; padding: 10px; background: #21262d; border: none; border-radius: 8px; color: #e6edf3; cursor: pointer; font-size: 0.9rem; }
+
+    /* Virtual Consultation */
+    .chat-wrap { max-width: 800px; display: flex; flex-direction: column; height: calc(100vh - 200px); }
+    .chat-messages { flex: 1; overflow-y: auto; background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 14px; }
+    .msg { max-width: 70%; padding: 12px 16px; border-radius: 12px; font-size: 0.9rem; line-height: 1.5; }
+    .msg.bot { background: #21262d; color: #e6edf3; align-self: flex-start; border-bottom-left-radius: 4px; }
+    .msg.user { background: linear-gradient(135deg, #58a6ff, #a371f7); color: #fff; align-self: flex-end; border-bottom-right-radius: 4px; }
+    .chat-input-row { display: flex; gap: 10px; margin-top: 14px; }
+    .chat-input {
+      flex: 1; background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+      color: #e6edf3; padding: 12px 16px; font-size: 0.9rem; outline: none; font-family: inherit;
+    }
+    .chat-input:focus { border-color: #58a6ff; }
+    .btn-send { padding: 12px 20px; background: linear-gradient(135deg, #58a6ff, #a371f7); border: none; border-radius: 8px; color: #fff; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+
+    /* Mobile Responsive */
+    @media (max-width: 768px) {
+      body { flex-direction: column; height: auto; overflow: auto; }
+      .sidebar { width: 100%; min-width: unset; flex-direction: row; padding: 10px 0; border-right: none; border-bottom: 1px solid #21262d; overflow-x: auto; }
+      .logo { display: none; }
+      .nav-item { flex-direction: column; gap: 4px; padding: 8px 14px; font-size: 0.72rem; border-left: none; border-bottom: 3px solid transparent; white-space: nowrap; }
+      .nav-item.active { border-left-color: transparent; border-bottom-color: #58a6ff; }
+      .nav-item svg { width: 20px; height: 20px; }
+      .main { height: auto; }
+      .content { padding: 16px; }
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .vitals-grid { grid-template-columns: 1fr 1fr; }
+      .page-title { font-size: 1.4rem; }
+      .chat-wrap { height: calc(100vh - 280px); max-width: 100%; }
+      .chat-messages { padding: 14px; gap: 10px; min-height: 300px; }
+      .msg { max-width: 85%; font-size: 0.88rem; padding: 10px 14px; }
+      .chat-input { font-size: 1rem; padding: 14px; }
+      .btn-send { padding: 14px 18px; font-size: 1rem; }
+      .chat-input-row { margin-top: 10px; }
+      .topbar { padding: 12px 16px; }
+      .vitals-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+      .symptom-card { padding: 16px; }
+      textarea { font-size: 1rem; }
+      .modal { width: 90%; }
+    }
+
+    @media (max-width: 400px) {
+      .vitals-grid { grid-template-columns: 1fr; }
+      .nav-item { padding: 8px 10px; font-size: 0.68rem; }
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <div class="logo">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    HealthAI
+  </div>
+  <div class="nav-item active" onclick="navigate('dashboard', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    Dashboard Overview
+  </div>
+  <div class="nav-item" onclick="navigate('symptoms', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    Symptom Analyzer
+  </div>
+  <div class="nav-item" onclick="navigate('vitals', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Vitals Monitor
+  </div>
+  <div class="nav-item" onclick="navigate('consultation', this)">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><polyline points="8 21 12 17 16 21"/></svg>
+    Virtual Consultation
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="topbar">
+    <span class="topbar-title" id="topbar-title">Dashboard Overview</span>
+    <div class="topbar-actions">
+      <button class="icon-btn" title="Notifications">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      </button>
+      <button class="icon-btn" title="Settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      </button>
+      <div style="position:relative">
+        <button class="icon-btn" id="login-btn" onclick="openLogin()" title="Login" style="width:auto;padding:0 14px;gap:6px;color:#58a6ff;font-size:0.85rem;font-weight:600;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          <span id="login-label">Login</span>
+        </button>
+        <div id="user-dropdown" style="display:none;position:absolute;right:0;top:44px;background:#161b22;border:1px solid #30363d;border-radius:8px;min-width:160px;z-index:200;overflow:hidden;">
+          <div id="dropdown-email" style="padding:12px 16px;font-size:0.8rem;color:#8b949e;border-bottom:1px solid #21262d;"></div>
+          <div onclick="logout()" style="padding:12px 16px;font-size:0.88rem;color:#f85149;cursor:pointer;display:flex;align-items:center;gap:8px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            Logout
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- Dashboard -->
+    <div class="page active" id="page-dashboard">
+      <div class="page-title">Welcome back 👋</div>
+      <div class="page-sub">Here is your daily health intelligence summary</div>
+      <div class="dashboard-grid">
+        <div class="card">
+          <div class="card-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Overall Health Score
+          </div>
+          <div class="score-ring">
+            <div class="ring-wrap">
+              <svg width="120" height="120" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#21262d" stroke-width="10"/>
+                <circle cx="60" cy="60" r="50" fill="none" stroke="#3fb950" stroke-width="10"
+                  stroke-dasharray="314" stroke-dashoffset="25" stroke-linecap="round"/>
+              </svg>
+              <div class="ring-num">92</div>
+            </div>
+            <div class="score-change">↑ 2% from last week</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+            Recent AI Analysis
+          </div>
+          <div class="analysis-item">
+            <h4>Mild Headache Analysis</h4>
+            <p>Likely due to screen time. The AI recommends applying the 20-20-20 rule during work hours.</p>
+          </div>
+          <div class="analysis-item">
+            <h4>Sleep Pattern Analytics</h4>
+            <p>Normal REM cycles detected last night. Quality improved by 15%.</p>
+          </div>
+          <div class="analysis-item">
+            <h4>Hydration Reminder</h4>
+            <p>Based on your activity level, aim for 2.5L of water today.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:20px">
+        <div class="card-label">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Quick Actions
+        </div>
+        <button class="btn-primary" style="margin-top:0;margin-bottom:10px" onclick="navigate('symptoms', document.querySelectorAll('.nav-item')[1])">
+          🔍 Analyze New Symptom
+        </button>
+        <button class="btn-primary" style="margin-top:0;background:linear-gradient(135deg,#21262d,#21262d);border:1px solid #30363d" onclick="navigate('consultation', document.querySelectorAll('.nav-item')[3])">
+          🖥 Start Virtual Consult
+        </button>
+      </div>
+    </div>
+
+    <!-- Symptom Analyzer -->
+    <div class="page" id="page-symptoms">
+      <div class="page-title">Symptom Analyzer</div>
+      <div class="page-sub">Describe how you're feeling, and our AI will provide an immediate assessment.</div>
+      <div class="symptom-card">
+        <label>Describe your symptoms in detail</label>
+        <textarea id="symptom-input" placeholder="e.g., I have acne, stomach ache, eating too much junk food, feeling dehydrated..."></textarea>
+        <button class="btn-primary" onclick="analyzeSymptoms()">Analyze Symptoms</button>
+        <div class="result-box" id="symptom-result">
+          <h4>AI Assessment</h4>
+          <p id="symptom-result-text"></p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vitals Monitor -->
+    <div class="page" id="page-vitals">
+      <div class="vitals-header">
+        <div>
+          <div class="page-title">Vitals Monitor</div>
+          <div class="page-sub" style="margin-bottom:0">Track your key health metrics over time.</div>
+        </div>
+        <button class="btn-add" onclick="document.getElementById('modal').classList.add('show')">+ Add Reading</button>
+      </div>
+      <div class="vitals-grid" id="vitals-grid">
+        <div class="vital-card green">
+          <div class="vital-label">Heart Rate</div>
+          <div><span class="vital-value" id="v-heart">72</span><span class="vital-unit">bpm</span></div>
+          <div class="vital-status normal">Normal</div>
+        </div>
+        <div class="vital-card blue">
+          <div class="vital-label">Blood Pressure</div>
+          <div><span class="vital-value" id="v-bp">118/76</span><span class="vital-unit">mmHg</span></div>
+          <div class="vital-status optimal">Optimal</div>
+        </div>
+        <div class="vital-card green">
+          <div class="vital-label">Blood Sugar</div>
+          <div><span class="vital-value" id="v-sugar">95</span><span class="vital-unit">mg/dL</span></div>
+          <div class="vital-status normal">Normal</div>
+        </div>
+        <div class="vital-card yellow">
+          <div class="vital-label">Cholesterol</div>
+          <div><span class="vital-value" id="v-chol">180</span><span class="vital-unit">mg/dL</span></div>
+          <div class="vital-status normal">Normal</div>
+        </div>
+        <div class="vital-card teal">
+          <div class="vital-label">Oxygen Level</div>
+          <div><span class="vital-value" id="v-oxy">98</span><span class="vital-unit">%</span></div>
+          <div class="vital-status optimal">Optimal</div>
+        </div>
+        <div class="vital-card purple">
+          <div class="vital-label">Temperature</div>
+          <div><span class="vital-value" id="v-temp">98.6</span><span class="vital-unit">°F</span></div>
+          <div class="vital-status normal">Normal</div>
+        </div>
+      </div>
+
+      <!-- Heart Rate Trend Chart -->
+      <div class="card" style="margin-top:20px">
+        <div class="card-label" style="margin-bottom:16px;font-size:0.95rem;color:#c9d1d9;font-weight:600;">Heart Rate Trend (Last 7 Days)</div>
+        <canvas id="heartChart" height="100"></canvas>
+      </div>
+    </div>
+
+    <!-- Virtual Consultation -->
+    <div class="page" id="page-consultation">
+      <div class="page-title">Virtual Consultation</div>
+      <div class="page-sub">Chat with our AI Assistant for immediate medical guidance.</div>
+      <div class="chat-wrap">
+        <div class="chat-messages" id="chat-messages">
+          <div class="msg bot">Hello! I am your AI Health Assistant. How can I help you today?</div>
+        </div>
+        <div class="chat-input-row">
+          <input class="chat-input" id="chat-input" type="text" placeholder="Type your health question..." onkeydown="if(event.key==='Enter') sendMessage()" />
+          <button class="btn-send" onclick="sendMessage()">Send</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div class="modal-overlay" id="login-modal">
+  <div class="modal">
+    <h3 id="auth-title">Login</h3>
+    <div class="form-group">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="you@example.com" />
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="auth-password" placeholder="••••••••" />
+    </div>
+    <div id="auth-error" style="color:#f85149;font-size:0.82rem;margin-top:6px;display:none;"></div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="closeLogin()">Cancel</button>
+      <button class="btn-primary" style="margin-top:0;flex:1" onclick="handleAuth()">Login</button>
+    </div>
+    <p style="text-align:center;margin-top:14px;font-size:0.82rem;color:#8b949e;">
+      Don't have an account? <span style="color:#58a6ff;cursor:pointer;" onclick="toggleAuthMode()">Sign up</span>
+    </p>
+  </div>
+</div>
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h3>Add New Reading</h3>
+    <div class="form-group">
+      <label>Metric</label>
+      <select id="metric-type">
+        <option value="heart">Heart Rate (bpm)</option>
+        <option value="bp">Blood Pressure (mmHg)</option>
+        <option value="sugar">Blood Sugar (mg/dL)</option>
+        <option value="chol">Cholesterol (mg/dL)</option>
+        <option value="oxy">Oxygen Level (%)</option>
+        <option value="temp">Temperature (°F)</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Value</label>
+      <input type="text" id="metric-value" placeholder="e.g. 75" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="document.getElementById('modal').classList.remove('show')">Cancel</button>
+      <button class="btn-primary" style="margin-top:0;flex:1" onclick="saveReading()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Auth
+  let users = JSON.parse(localStorage.getItem('hai_users') || '{}');
+  let currentUser = localStorage.getItem('hai_current') || null;
+  let authMode = 'login';
+
+  function updateLoginBtn() {
+    if (currentUser) {
+      document.getElementById('login-label').textContent = currentUser[0].toUpperCase();
+      document.getElementById('login-btn').title = currentUser;
+      document.getElementById('login-btn').style.background = '#58a6ff';
+      document.getElementById('login-btn').style.color = '#0d1117';
+      document.getElementById('login-btn').style.borderRadius = '8px';
+      document.getElementById('login-btn').querySelector('svg').style.display = 'none';
+      document.getElementById('dropdown-email').textContent = currentUser;
+      document.getElementById('login-btn').onclick = toggleDropdown;
+    } else {
+      document.getElementById('login-label').textContent = 'Login';
+      document.getElementById('login-btn').title = 'Login';
+      document.getElementById('login-btn').style.background = '';
+      document.getElementById('login-btn').style.color = '#58a6ff';
+      document.getElementById('login-btn').querySelector('svg').style.display = '';
+      document.getElementById('login-btn').onclick = openLogin;
+      document.getElementById('user-dropdown').style.display = 'none';
+    }
+  }
+
+  function toggleDropdown() {
+    const dd = document.getElementById('user-dropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('click', function(e) {
+    const dd = document.getElementById('user-dropdown');
+    const btn = document.getElementById('login-btn');
+    if (!btn.contains(e.target) && !dd.contains(e.target)) dd.style.display = 'none';
+  });
+
+  function openLogin() {
+    authMode = 'login';
+    document.getElementById('auth-title').textContent = 'Login';
+    document.querySelector('#login-modal .btn-primary').textContent = 'Login';
+    document.getElementById('auth-error').style.display = 'none';
+    document.getElementById('auth-email').value = '';
+    document.getElementById('auth-password').value = '';
+    document.getElementById('login-modal').classList.add('show');
+  }
+
+  function closeLogin() {
+    document.getElementById('login-modal').classList.remove('show');
+  }
+
+  function toggleAuthMode() {
+    authMode = authMode === 'login' ? 'signup' : 'login';
+    const isLogin = authMode === 'login';
+    document.getElementById('auth-title').textContent = isLogin ? 'Login' : 'Sign Up';
+    document.querySelector('#login-modal .btn-primary').textContent = isLogin ? 'Login' : 'Sign Up';
+    document.querySelector('#login-modal p span').textContent = isLogin ? 'Sign up' : 'Login';
+    document.querySelector('#login-modal p').innerHTML = isLogin
+      ? 'Don\'t have an account? <span style="color:#58a6ff;cursor:pointer;" onclick="toggleAuthMode()">Sign up</span>'
+      : 'Already have an account? <span style="color:#58a6ff;cursor:pointer;" onclick="toggleAuthMode()">Login</span>';
+    document.getElementById('auth-error').style.display = 'none';
+  }
+
+  function handleAuth() {
+    const email = document.getElementById('auth-email').value.trim();
+    const pass = document.getElementById('auth-password').value;
+    const err = document.getElementById('auth-error');
+    if (!email || !pass) { err.textContent = 'Please fill in all fields.'; err.style.display = 'block'; return; }
+    if (authMode === 'signup') {
+      if (users[email]) { err.textContent = 'Account already exists. Please login.'; err.style.display = 'block'; return; }
+      users[email] = pass;
+      localStorage.setItem('hai_users', JSON.stringify(users));
+      currentUser = email;
+    } else {
+      if (!users[email] || users[email] !== pass) { err.textContent = 'Invalid email or password.'; err.style.display = 'block'; return; }
+      currentUser = email;
+    }
+    localStorage.setItem('hai_current', currentUser);
+    closeLogin();
+    updateLoginBtn();
+  }
+
+  function logout() {
+    currentUser = null;
+    localStorage.removeItem('hai_current');
+    updateLoginBtn();
+  }
+
+  updateLoginBtn();
+
+  // Heart Rate Chart
+  function drawChart() {
+    const canvas = document.getElementById('heartChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const data = [68, 72, 75, 71, 78, 74, 72];
+    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const W = canvas.offsetWidth; const H = 160;
+    canvas.width = W; canvas.height = H;
+    const barW = Math.floor(W / data.length * 0.5);
+    const gap = Math.floor(W / data.length);
+    const maxVal = 100; const minVal = 50;
+    const padTop = 20; const padBottom = 30;
+    ctx.clearRect(0, 0, W, H);
+    data.forEach((val, i) => {
+      const barH = ((val - minVal) / (maxVal - minVal)) * (H - padTop - padBottom);
+      const x = i * gap + (gap - barW) / 2;
+      const y = H - padBottom - barH;
+      const grad = ctx.createLinearGradient(0, y, 0, H - padBottom);
+      grad.addColorStop(0, '#58a6ff');
+      grad.addColorStop(1, '#1f6feb');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.roundRect(x, y, barW, barH, 4);
+      ctx.fill();
+      ctx.fillStyle = '#c9d1d9';
+      ctx.font = '11px Segoe UI';
+      ctx.textAlign = 'center';
+      ctx.fillText(val, x + barW / 2, y - 6);
+      ctx.fillStyle = '#8b949e';
+      ctx.fillText(days[i], x + barW / 2, H - 8);
+    });
+  }
+  window.addEventListener('resize', drawChart);
+
+  const titles = { dashboard: 'Dashboard Overview', symptoms: 'Symptom Analyzer', vitals: 'Health Vitals', consultation: 'Virtual AI Consultation' };
+
+  function navigate(page, el) {
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    el.classList.add('active');
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + page).classList.add('active');
+    document.getElementById('topbar-title').textContent = titles[page];
+    if (page === 'vitals') setTimeout(drawChart, 50);
+  }
+
+  // Symptom analyzer responses
+  const responses = {
+    headache: "Based on your symptoms, this may be a tension headache. Common causes include dehydration, stress, or prolonged screen time. Try resting in a quiet room, staying hydrated, and applying a cold compress. If symptoms persist beyond 48 hours, consult a doctor.",
+    fever: "Your symptoms suggest a possible viral infection. Monitor your temperature regularly. Stay hydrated, rest well, and take fever-reducing medication if needed. Seek medical attention if fever exceeds 103°F or lasts more than 3 days.",
+    cold: "Symptoms are consistent with a common cold. Rest, stay hydrated, and consider over-the-counter cold remedies. Symptoms typically resolve within 7-10 days. See a doctor if symptoms worsen.",
+    acne: "Your symptoms suggest acne, which is often triggered by excess oil, bacteria, or hormonal changes. Diet plays a big role — avoid oily/fried foods, dairy, and high-sugar items. Include more fruits, vegetables, and water in your diet. Wash your face twice daily with a gentle cleanser. Avoid touching your face. If severe, consult a dermatologist.",
+    stomach: "Stomach ache can be caused by indigestion, gas, acidity, or food intolerance. Avoid spicy, oily, and processed foods. Eat light meals — khichdi, curd rice, or boiled vegetables are good options. Drink warm water or ginger tea. Avoid skipping meals. If pain is severe or persistent, consult a doctor immediately.",
+    diet_sugar: "High sugar intake can cause energy crashes, acne, weight gain, and increased risk of diabetes. Reduce sweets, soft drinks, and packaged foods. Replace with fruits, nuts, and whole grains. Drink more water and include fiber-rich foods like oats and vegetables.",
+    diet_junk: "Frequent junk food consumption can lead to digestive issues, fatigue, acne, and nutritional deficiencies. Switch to home-cooked meals with balanced proteins, carbs, and healthy fats. Include green vegetables, lentils, and fruits daily.",
+    diet_dehydration: "Dehydration can cause headaches, fatigue, dry skin, and poor concentration. Aim for at least 8-10 glasses of water daily. Include water-rich foods like cucumber, watermelon, and oranges. Avoid excess caffeine and alcohol.",
+    default: "Based on your description, I recommend monitoring your symptoms closely. Ensure you're getting adequate rest, staying hydrated, and maintaining a balanced diet. If symptoms persist or worsen, please consult a healthcare professional for a proper diagnosis."
+  };
+
+  function analyzeSymptoms() {
+    const input = document.getElementById('symptom-input').value.toLowerCase().trim();
+    if (!input) return;
+    const box = document.getElementById('symptom-result');
+    const text = document.getElementById('symptom-result-text');
+    let response = responses.default;
+    if (input.includes('acne') || input.includes('pimple') || input.includes('breakout') || input.includes('skin')) response = responses.acne;
+    else if (input.includes('stomach') || input.includes('tummy') || input.includes('abdomen') || input.includes('belly') || input.includes('pet dard') || input.includes('nausea') || input.includes('vomit') || input.includes('indigestion')) response = responses.stomach;
+    else if (input.includes('sugar') || input.includes('sweet') || input.includes('chocolate') || input.includes('candy')) response = responses.diet_sugar;
+    else if (input.includes('junk') || input.includes('fast food') || input.includes('oily') || input.includes('fried') || input.includes('pizza') || input.includes('burger')) response = responses.diet_junk;
+    else if (input.includes('dehydrat') || input.includes('thirst') || input.includes('dry mouth') || input.includes('not drinking water')) response = responses.diet_dehydration;
+    else if (input.includes('headache') || input.includes('head')) response = responses.headache;
+    else if (input.includes('fever') || input.includes('temperature') || input.includes('hot')) response = responses.fever;
+    else if (input.includes('cold') || input.includes('runny') || input.includes('sneez') || input.includes('cough')) response = responses.cold;
+    text.textContent = response;
+    box.classList.add('show');
+  }
+
+  // Vitals
+  function saveReading() {
+    const type = document.getElementById('metric-type').value;
+    const val = document.getElementById('metric-value').value.trim();
+    if (!val) return;
+    document.getElementById('v-' + type).textContent = val;
+    document.getElementById('modal').classList.remove('show');
+    document.getElementById('metric-value').value = '';
+  }
+
+  // Chat
+  const botReplies = [
+    "Based on what you've described, I'd recommend monitoring your symptoms and staying well-hydrated.",
+    "That's a great question. Regular exercise and a balanced diet can significantly improve those metrics.",
+    "Your vitals look generally healthy. However, I'd suggest scheduling a routine check-up with your doctor.",
+    "I understand your concern. Stress can have a significant impact on physical health. Consider mindfulness or light exercise.",
+    "For better sleep quality, try maintaining a consistent sleep schedule and avoiding screens 1 hour before bed.",
+    "It's important to consult a licensed physician for a definitive diagnosis. I can help you track symptoms in the meantime."
+  ];
+  let replyIdx = 0;
+
+  function sendMessage() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg) return;
+    const container = document.getElementById('chat-messages');
+    const userMsg = document.createElement('div');
+    userMsg.className = 'msg user';
+    userMsg.textContent = msg;
+    container.appendChild(userMsg);
+    input.value = '';
+    setTimeout(() => {
+      const botMsg = document.createElement('div');
+      botMsg.className = 'msg bot';
+      botMsg.textContent = botReplies[replyIdx % botReplies.length];
+      replyIdx++;
+      container.appendChild(botMsg);
+      container.scrollTop = container.scrollHeight;
+    }, 800);
+    container.scrollTop = container.scrollHeight;
+  }
+</script>
+</body>
+</html>
